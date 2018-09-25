@@ -31,6 +31,7 @@
 @property (strong, nonatomic) IBOutlet UITextField *carrierNameTextField;
 @property (strong, nonatomic) IBOutlet UISegmentedControl *bluetoothSegmentedControl;
 @property (strong, nonatomic) IBOutlet UISegmentedControl *networkSegmentedControl;
+@property (strong, nonatomic) UITextField *selectedTextField;
 @end
 
 @implementation ViewController
@@ -49,6 +50,14 @@
   [self setNetworkSegementedControlSelectedSegment];
   [self setCarrierNameTextFieldText];
   [self setTimeStringTextFieldText];
+  
+  // add tap gesture to self.view, tap view to dimiss keyboard.
+  UITapGestureRecognizer *tapView = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(viewTapped:)];
+  [self.view addGestureRecognizer:tapView];
+  
+  NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
+  [nc addObserver:self selector:@selector(keyboardDidShow:) name:UIKeyboardDidShowNotification object:nil];
+  [nc addObserver:self selector:@selector(keyboardDidHide:) name:UIKeyboardWillHideNotification object:nil];
   
   NSDictionary *environment = [[NSProcessInfo processInfo] environment];
   if ([environment[@"SIMULATOR_STATUS_MAGIC_OVERRIDES"] isEqualToString:@"ENABLE"]) {
@@ -95,6 +104,15 @@
 }
 
 #pragma mark Text field delegate
+
+- (void)textFieldDidBeginEditing:(UITextField *)textField {
+  self.selectedTextField = textField;
+}
+
+- (void)textFieldDidEndEditing:(UITextField *)textField {
+  self.selectedTextField = NULL;
+}
+
 - (BOOL)textFieldShouldReturn:(UITextField *)textField
 {
   [textField resignFirstResponder];
@@ -132,6 +150,76 @@
 - (void)setTimeStringTextFieldText
 {
   self.timeStringTextField.text = [SDStatusBarManager sharedInstance].timeString;
+}
+
+#pragma mark User Interactions
+
+- (void) viewTapped: (UITapGestureRecognizer *) gr {
+  if (gr.state == UIGestureRecognizerStateEnded) {
+    [self.view endEditing:YES];
+  }
+}
+
+#pragma mark Event Observers
+
+- (void) keyboardDidShow: (NSNotification *) notification {
+  // ensure the view is loaded and showing on the top of the app window.
+  if (!self.isViewLoaded || self.view.window == NULL) {
+    NSLog(@"view is not visible");
+    return;
+  }
+  
+  if (self.selectedTextField) {
+    CGRect adjustedFrame = self.selectedTextField.frame;
+    UIView *parent = self.view;
+    if (parent) {
+      adjustedFrame = [self.view convertRect:self.selectedTextField.frame toView:parent];
+    }
+    
+    CGFloat maxY = adjustedFrame.size.height + adjustedFrame.origin.y;
+    
+    NSValue *keyboardRectValue = notification.userInfo[UIKeyboardFrameEndUserInfoKey];
+    
+    if (keyboardRectValue == NULL) {
+      return;
+    }
+    
+    CGRect keyboardRect = keyboardRectValue.CGRectValue;
+    
+    // Set view origin back to zero.
+    CGRect rect = self.view.frame;
+    rect.origin.y = 0;
+    self.view.frame = rect;
+    
+    CGFloat offset = maxY - keyboardRect.origin.y;
+    
+    if (offset < 0) {
+      return;
+    }
+    
+    rect.origin.y -= offset;
+    
+    [UIView animateWithDuration:0.3 delay:0.0 options:UIViewAnimationOptionCurveEaseIn animations:^{
+      self.view.frame = rect;
+    } completion:NULL];
+  }
+}
+
+- (void) keyboardDidHide: (NSNotification *) notification {
+  // ensure the view is loaded and showing on the top of the app window.
+  if (!self.isViewLoaded || self.view.window == NULL) {
+    NSLog(@"view is not visible");
+    return;
+  }
+  
+  if (self.view.frame.origin.y < 0) {
+    CGRect rect = self.view.frame;
+    rect.origin.y = 0;
+    
+    [UIView animateWithDuration:0.3 delay:0.0 options:UIViewAnimationOptionCurveEaseIn animations:^{
+      self.view.frame = rect;
+    } completion:NULL];
+  }
 }
 
 #pragma mark Status bar settings
