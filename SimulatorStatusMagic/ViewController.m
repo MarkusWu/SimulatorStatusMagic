@@ -39,6 +39,10 @@
 - (void)viewDidLoad
 {
   [super viewDidLoad];
+  
+  // auto adjust button text font size.
+  self.overrideButton.titleLabel.adjustsFontSizeToFitWidth = YES;
+  self.overrideButton.titleLabel.minimumScaleFactor = 0.5;
 
   [self setOverrideButtonText];
   [self setBluetoothSegementedControlSelectedSegment];
