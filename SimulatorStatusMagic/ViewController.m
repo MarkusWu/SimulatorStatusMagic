@@ -70,6 +70,19 @@
   }}
 
 #pragma mark Actions
+
+- (IBAction)randomTimeButtonTapped:(UIButton *)sender {
+  int hour = arc4random_uniform(3) + 1;
+  int min = arc4random_uniform(60);
+  NSString *formatString = @"%d:%d AM";
+  if (min < 10) {
+    formatString = @"%d:0%d AM";
+  }
+  NSString *text = [NSString stringWithFormat: formatString, hour, min];
+  [self timeStringTextField].text = text;
+  [SDStatusBarManager sharedInstance].timeString = text;
+}
+
 - (IBAction)overrideButtonTapped:(UIButton *)sender
 {
   if ([SDStatusBarManager sharedInstance].usingOverrides) {
